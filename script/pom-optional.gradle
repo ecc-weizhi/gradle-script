@@ -1,0 +1,31 @@
+// Optional pom fields.
+// Replace with real values and uncomment them as necessary
+
+println("Applying external gradle script from pom-optional.gradle")
+
+def pom = {
+//    name = "My Project Name"
+//    description = "Do awesome stuff"
+//    url = "https://github.com/ecc-weizhi/gradle-script"
+//
+//    licenses {
+//        license {
+//            name = 'The Apache License, Version 2.0'
+//            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+//        }
+//    }
+//    developers {
+//        developer {
+//            id = 'ecc-weizhi'
+//            name = 'Lin Weizhi'
+//            email = 'ecc.weizhi@gmail.com'
+//        }
+//    }
+//    scm {
+//        connection = "scm:git:git://github.com/ecc-weizhi/gradle-script.git"
+//        developerConnection = "scm:git:git://github.com/ecc-weizhi/gradle-script.git"
+//        url = "https://github.com/ecc-weizhi/gradle-script"
+//    }
+}
+
+rootProject.extensions.add("pom", pom)

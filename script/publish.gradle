@@ -1,0 +1,64 @@
+println("Applying external gradle script from publish.gradle")
+
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+// Mandatory pom fields
+def pomGroupId = rootProject.project_group_id
+def pomArtifactId = rootProject.project_artifact_id
+def pomVersion = rootProject.versionName
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+
+            // Mandatory pom fields
+            groupId rootProject.project_group_id
+            artifactId rootProject.project_artifact_id
+            version rootProject.versionName
+
+            // Additional optional pom fields
+            pom rootProject.pom
+        }
+    }
+    repositories {
+        maven {
+            name "nexus"
+            credentials {
+                username "admin"
+                password "admin123"
+            }
+            url = version.endsWith('SNAPSHOT') ? rootProject.snapshot_repository_url : rootProject.release_repository_url
+        }
+    }
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    description = "Assemble jar with both java and kotlin sources"
+    classifier = 'sources'
+}
+
+task javadocJar(type: Jar) {
+    from tasks.dokka
+    description = "Assemble both java and kotlin docs"
+    classifier = 'javadoc'
+}
+
+jar {
+    eachFile { details ->
+        def oldPath = details.path
+        if (oldPath.matches("META-INF/.+\\.kotlin_module")) {
+            def newPath = "META-INF/${rootProject.project_group_id}.${rootProject.project_artifact_id}.kotlin_module"
+            println("Rename $oldPath to $newPath")
+            details.path = newPath
+        }
+    }
+}
+
+//signing {
+//    sign publishing.publications.MyPublication
+//}

@@ -1,0 +1,90 @@
+println("Applying external gradle script from publish-android.gradle")
+
+// This block will rename aar output.
+android.libraryVariants.all { variant ->
+    variant.outputs.all { output ->
+        if (outputFileName.endsWith('.aar')) {
+            def newName
+            if (variant.buildType.name == 'release') {
+                newName = "${rootProject.project_artifact_id}-${rootProject.versionName}.aar"
+            } else {
+                newName = "${rootProject.project_artifact_id}-${variant.buildType.name}-${rootProject.versionName}.aar"
+            }
+            println("Rename output from $outputFileName to $newName")
+            outputFileName = newName
+        }
+    }
+}
+
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+// Mandatory pom fields
+def pomGroupId = rootProject.project_group_id
+def pomArtifactId = rootProject.project_artifact_id
+def pomVersion = rootProject.versionName
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            artifact("$buildDir/outputs/aar/${rootProject.project_artifact_id}-${rootProject.versionName}.aar")
+            artifact sourcesJar
+            artifact javadocJar
+
+            // Mandatory pom fields
+            groupId rootProject.project_group_id
+            artifactId rootProject.project_artifact_id
+            version rootProject.versionName
+
+            pom.withXml {
+                def root = asNode()
+                root.children().last() + rootProject.pom
+
+                def dependenciesNode = asNode().appendNode('dependencies')
+                // Iterate over the implementation dependencies (we don't want the test ones), adding a <dependency> node for each
+                configurations.implementation.allDependencies.each {
+                    // Ensure dependencies such as fileTree are not included.
+                    if (it.name != 'unspecified') {
+                        println("Manually appending dependency: $it.group:$it.name")
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name "nexus"
+            credentials {
+                username "admin"
+                password "admin123"
+            }
+            url = rootProject.versionName.endsWith('SNAPSHOT') ? rootProject.snapshot_repository_url : rootProject.release_repository_url
+        }
+    }
+}
+
+// By default the output directory is /build/libs
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    description = "Assemble jar with both java and kotlin sources from src/main/java"
+    classifier = 'sources'
+    baseName = rootProject.project_artifact_id
+    version = rootProject.versionName
+}
+
+// By default the output directory is /build/libs
+task javadocJar(type: Jar) {
+    from tasks.dokka
+    description = "Assemble both java and kotlin docs"
+    classifier = 'javadoc'
+    baseName = rootProject.project_artifact_id
+    version = rootProject.versionName
+}
+
+//signing {
+//    sign publishing.publications.MyPublication
+//}
